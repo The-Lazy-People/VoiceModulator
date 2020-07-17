@@ -3,4 +3,5 @@
     <string name="record">RECORD AUDIO</string>
     <string name="stop">STOP RECORDING</string>
     <string name="play">PLAY RECORDING</string>
+    <string name="denied">Permission not granted</string>
 </resources>
