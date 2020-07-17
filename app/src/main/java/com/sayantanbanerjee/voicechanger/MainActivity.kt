@@ -3,8 +3,6 @@ package com.sayantanbanerjee.voicechanger
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.media.AudioAttributes
-import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.AudioTrack
 import android.os.Bundle
@@ -17,6 +15,9 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.io.*
 
 
@@ -129,58 +130,60 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun playRecord() {
-        var outputFrequency: Int = 0
-        val str: String = spFrequency.selectedItem.toString()
-        outputFrequency = Integer.parseInt(str)
+        CoroutineScope(Dispatchers.IO).launch {
+            var outputFrequency: Int = 0
+            val str: String = spFrequency.selectedItem.toString()
+            outputFrequency = Integer.parseInt(str)
 
-        val shortSizeInBytes = Short.SIZE_BYTES / Byte.SIZE_BYTES
+            val shortSizeInBytes = Short.SIZE_BYTES / Byte.SIZE_BYTES
 
-        Log.i("####FILE", file.length().toString())
+            Log.i("####FILE", file.length().toString())
 
-        val bufferedSizeInBytes: Int = (file.length() / shortSizeInBytes).toInt()
-        val audioData: ShortArray = ShortArray(bufferedSizeInBytes)
+            val bufferedSizeInBytes: Int = (file.length() / shortSizeInBytes).toInt()
+            val audioData: ShortArray = ShortArray(bufferedSizeInBytes)
 
-        val inputStream: InputStream = FileInputStream(file)
-        val bufferedInputStream: BufferedInputStream = BufferedInputStream(inputStream)
-        val dataInputStream: DataInputStream = DataInputStream(bufferedInputStream)
+            val inputStream: InputStream = FileInputStream(file)
+            val bufferedInputStream: BufferedInputStream = BufferedInputStream(inputStream)
+            val dataInputStream: DataInputStream = DataInputStream(bufferedInputStream)
 
-        var j: Int = 0
-        while (dataInputStream.available() > 0) {
-            audioData[j] = dataInputStream.readShort()
-            j++
+            var j: Int = 0
+            while (dataInputStream.available() > 0) {
+                audioData[j] = dataInputStream.readShort()
+                j++
+            }
+            dataInputStream.close()
+
+            // TODO : Here I have hard-coded 10000 as bufferSizeInBytes value whereas it should be "bufferedSizeInBytes" variable
+            audioTrack = AudioTrack(3, outputFrequency, 2, 2, 10000, 1)
+            audioTrack.play()
+            audioTrack.write(audioData, 0, bufferedSizeInBytes)
         }
-        dataInputStream.close()
-
-        // TODO : Here I have hard-coded 10000 as bufferSizeInBytes value whereas it should be "bufferedSizeInBytes" variable
-        audioTrack = AudioTrack(3, outputFrequency, 2, 2, 10000, 1)
-        audioTrack.play()
-        audioTrack.write(audioData, 0, bufferedSizeInBytes)
-
-
     }
 
     private fun startRecord() {
         val myFile: File = File(Environment.getExternalStorageDirectory().absolutePath, "test.pcm")
         myFile.createNewFile()
-        val outputStream: OutputStream = FileOutputStream(myFile)
-        val bufferedOutputStream: BufferedOutputStream = BufferedOutputStream(outputStream)
-        val dataOutputStream: DataOutputStream = DataOutputStream(bufferedOutputStream)
+        CoroutineScope(Dispatchers.IO).launch {
+            val outputStream: OutputStream = FileOutputStream(myFile)
+            val bufferedOutputStream: BufferedOutputStream = BufferedOutputStream(outputStream)
+            val dataOutputStream: DataOutputStream = DataOutputStream(bufferedOutputStream)
 
-        val minBufferSize: Int = AudioRecord.getMinBufferSize(11025, 2, 2)
-        val audioData: ShortArray = ShortArray(minBufferSize)
-        val audioRecord: AudioRecord = AudioRecord(1, 11025, 2, 2, minBufferSize)
-        audioRecord.startRecording()
+            val minBufferSize: Int = AudioRecord.getMinBufferSize(11025, 2, 2)
+            val audioData: ShortArray = ShortArray(minBufferSize)
+            val audioRecord: AudioRecord = AudioRecord(1, 11025, 2, 2, minBufferSize)
+            audioRecord.startRecording()
 
-        while (recording) {
-            val numberOfShort = audioRecord.read(audioData, 0, minBufferSize)
-            for (i in 0 until numberOfShort - 1) {
-                dataOutputStream.writeShort(audioData[i].toInt())
+            while (recording) {
+                val numberOfShort = audioRecord.read(audioData, 0, minBufferSize)
+                for (i in 0 until numberOfShort - 1) {
+                    dataOutputStream.writeShort(audioData[i].toInt())
+                }
             }
-        }
 
-        if (!recording) {
-            audioRecord.stop()
-            dataOutputStream.close()
+            if (!recording) {
+                audioRecord.stop()
+                dataOutputStream.close()
+            }
         }
     }
 
