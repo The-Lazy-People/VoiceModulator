@@ -15,12 +15,15 @@ import java.lang.Exception
 class MainActivity : AppCompatActivity() {
 
     val file: File = File(Environment.getExternalStorageDirectory(), "test.pcm")
-    private var recording: Boolean = false
     private lateinit var spFrequency: Spinner
     private lateinit var record: Button
     private lateinit var play: Button
     private lateinit var adapter: ArrayAdapter<String>
     private lateinit var audioTrack: AudioTrack
+
+    companion object {
+        var recording: Boolean = false
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
